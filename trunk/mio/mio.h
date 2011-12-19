@@ -17,7 +17,7 @@ Comments:
 #ifndef MIO_H
 #define MIO_H
 
-#include "..\typedefs.h"
+#include "typedefs.h"
 
 #ifdef __cplusplus
 extern "C" {

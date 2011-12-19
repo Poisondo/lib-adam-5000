@@ -19,7 +19,7 @@ Comments: Библиотека для работы с TCP/IP сетью в ко�
 #ifndef NIO_H
 #define NIO_H
 
-#include "..\typedefs.h"
+#include "typedefs.h"
 
 #ifdef __cplusplus
 extern "C" {
