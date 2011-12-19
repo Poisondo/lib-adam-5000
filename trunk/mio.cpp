@@ -68,11 +68,7 @@ static int dio_val[8] = { 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
 //--------------------------------------------------------------------------------------------------------//
 /*** ГЛОБАЛЬНЫЕ ФУНКЦИИ ***/
 
-/*! \fn int GetSocketsVersion(void)
-    Возвращает номер версии Sockets API.
-    \return
-    - при успехе: номер версии
-    - при ошибке: -1, если номер API не найден
+/*!
 */
 void get_di_val(int slot, int *val)
 {
@@ -96,11 +92,7 @@ void get_di_val(int slot, int *val)
     *val ^= dio_val[slot];
 }
 
-/*! \fn int GetSocketsVersion(void)
-    Возвращает номер версии Sockets API.
-    \return
-    - при успехе: номер версии
-    - при ошибке: -1, если номер API не найден
+/*! 
 */
 // По 1 биту устанавливаем или сбрасываем!!!
 void set_do_bit(int slot, int bit, int val)
