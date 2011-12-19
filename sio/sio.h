@@ -19,7 +19,7 @@ Comments: A library for work with serial ports in your controllers ADAM 5510.
 #ifndef SIO_H
 #define SIO_H
 
-#include "..\typedefs.h"
+#include "typedefs.h"
 
 #ifdef __cplusplus
 extern "C" {
