@@ -1,19 +1,19 @@
 /*********************************************************************************************
-Project :
-Version :
-Date    : 24.03.2011
-Author  : Дьяконов О.Ю., Шиенков Д.И.
-Company :
-Comments: Библиотека для работы с последовательными портами в контроллерах ADAM 5510.
+Project:
+Version:
+Date: 24.03.2011
+Author: Oleg Diyakonov, Denis Shienkov
+Company:
+Comments: A library for work with serial ports in your controllers ADAM 5510.
 **********************************************************************************************/
 
 /*! \file sio.cpp
-
-    Аббревиатура модуля (файла) "sio" - Serial Input Output.
-
-    В этом модуле реализован интерфейс для доступа и работы с последовательными
-    портами COM1 - COM4 ПЛК серии ADAM 5510.
-*/
+ *
+ * Abbreviation of the module (file) "sio" - Serial Input Output.
+ *
+ * This module implements an interface to access and work with serial
+ * ports COM1 - COM4 PLC ADAM 5510.
+ */
 
 #include "sio.h"
 
@@ -24,12 +24,12 @@ Comments: Библиотека для работы с последователь
 
 
 //--------------------------------------------------------------------------------------------------------//
-/*** ЛОКАЛЬНЫЕ ПЕРЕЧИСЛЕНИЯ АДРЕСОВ И ЗНАЧЕИЙ БИТОВ РЕГИСТРОВ ***/
+/*** Private enums of addresses and of bits of registers ***/
 
-/*! \enum sio_offset_t
-    Смещения регистров UART от базового.
-    Всего в UART должно быть 12 регистров.
-*/
+/*!
+ * Offsets a UART registers relative to the base address.
+ * By default, a typical UART has 12 registers.
+ */
 typedef enum SIO_OFFSET {
     SIO_OFFSET_THB  = 0, /*!< Transmitter Holding BuFFer,        wo, DLAB = 0. */
     SIO_OFFSET_RB   = 0, /*!< Receiver BuFFer,                   ro, DLAB = 0. */
@@ -45,10 +45,10 @@ typedef enum SIO_OFFSET {
     SIO_OFFSET_SCR  = 7  /*!< Scratch Register,                  rw.           */
 } sio_offset_t;
 
-/*! \enum sio_ier_b_t
-    Значения комбинаций битов регистра IER.
-    Доступ: rw, при DLAB = 0.
-*/
+/*!
+ * The values of the combinations of bits of the register IER.
+ * Access: rw, when DLAB = 0.
+ */
 typedef enum SIO_IER_B {
     SIO_IER_ERDAI  = 0x01, /*!< Enable Received Data Available Interrupt,            > 0x00. */
     SIO_IER_ETHREI = 0x02, /*!< Enable Transmitter Holding Register Empty Interrupt, > 0x00. */
@@ -60,10 +60,10 @@ typedef enum SIO_IER_B {
     SIO_IER_RES2   = 0x80  /*!< Reserved.                                                    */
 } sio_ier_b_t;
 
-/*! \enum sio_iir_b_t
-    Значения комбинаций битов регистра IIR.
-    Доступ: ro.
-*/
+/*!
+ * The values of the combinations of bits of the register IIR.
+ * Access: ro.
+ */
 typedef enum SIO_IIR_B {
     SIO_IIR_IP      = 0x01, /*!< 0 = Interrupt Pending, 1 = No Interrupt Pending.      */
     SIO_IIR_ID_MASK = 0x0E, /*!< Interrupt ID Mask.                                    */
@@ -74,10 +74,10 @@ typedef enum SIO_IIR_B {
     SIO_IIR_RDTO    = 0x0C  /*!< Receiver Dtata timeout,                       = 0x0C. */
 } sio_iir_b_t;
 
-/*! \enum sio_fcr_b_t
-    Значения комбинаций битов регистра FCR.
-    Доступ: wo.
-*/
+/*!
+ * The values of the combinations of bits of the register FCR.
+ * Access: wo.
+ */
 typedef enum SIO_FCR_B {
     SIO_FCR_EF       = 0x01, /*!< Enable FIFO's,                      > 0x00. */
     SIO_FCR_CRF      = 0x02, /*!< Clear Receive FIFO,                 > 0x00. */
@@ -94,10 +94,10 @@ typedef enum SIO_FCR_B {
     SIO_FCR_ITL14    = 0xC0  /*!< Interrupt Trigger Level 14 Byte,    = 0xC0. */
 } sio_fcr_b_t;
 
-/*! \enum sio_lcr_b_t
-    Значения комбинаций битов регистра LCR.
-    Доступ: rw.
-*/
+/*!
+ * The values of the combinations of bits of the register LCR.
+ * Access: rw.
+ */
 typedef enum SIO_LCR_B {
     SIO_LCR_WL_MASK    = 0x03, /*!< Word Length Mask.                                       */
     SIO_LCR_WL5        = 0x00, /*!< Word Length 5 bits,                             = 0x00. */
@@ -118,10 +118,10 @@ typedef enum SIO_LCR_B {
                                     1 = DLLB, DLHB accessible.                              */
 } sio_lcr_b_t;
 
-/*! \enum sio_mcr_b_t
-    Значения комбинаций битов регистра MCR.
-    Доступ: rw.
-*/
+/*!
+ * The values of the combinations of bits of the register MCR.
+ * Access: rw.
+ */
 typedef enum SIO_MCR_B {
     SIO_MCR_FDTR = 0x01, /*!< Force Data Terminal Ready,             > 0x00. */
     SIO_MCR_FRS  = 0x02, /*!< Force Request to Send,                 > 0x00. */
@@ -133,10 +133,10 @@ typedef enum SIO_MCR_B {
     SIO_MCR_RES2 = 0x80  /*!< Reserved,                              > 0x00. */
 } sio_mcr_b_t;
 
-/*! \enum sio_lsr_b_t
-    Значения комбинаций битов регистра LSR.
-    Доступ: ro.
-*/
+/*!
+ * The values of the combinations of bits of the register LSR.
+ * Access: ro.
+ */
 typedef enum SIO_LSR_B {
     SIO_LSR_DR   = 0x01, /*!< Data Ready,                         > 0x00. */
     SIO_LSR_OE   = 0x02, /*!< Overrun Error,                      > 0x00. */
@@ -148,10 +148,10 @@ typedef enum SIO_LSR_B {
     SIO_LSR_ERF  = 0x80  /*!< Error in Received FIFO,             > 0x00. */
 } sio_lsr_b_t;
 
-/*! \enum sio_msr_b_t
-    Значения комбинаций битов регистра MSR.
-    Доступ: ro.
-*/
+/*!
+ * The values of the combinations of bits of the register MSR.
+ * Access: ro.
+ */
 typedef enum SIO_MSR_B {
     SIO_MSR_DCS  = 0x01, /*!< Delta Clear to Send,          > 0x00. */
     SIO_MSR_DDSR = 0x02, /*!< Delta Data Set Ready,         > 0x00. */
@@ -164,76 +164,110 @@ typedef enum SIO_MSR_B {
 } sio_msr_b_t;
 
 //--------------------------------------------------------------------------------------------------------//
-/*** ЛОКАЛЬНЫЕ СТРУКТУРЫ ДАННЫХ ***/
-/*! \struct sio_queue_t
-    Очередь I/O.
-*/
+/*** Private data structures ***/
+
+/*!
+ * I/O queue.
+ *
+ * Each direction of transmission in each a UART
+ * has its own separate queue.
+ */
 typedef struct SIO_QUEUE {
-    char *data; /*!< Указатель на буфер очереди. */
-    u16 size;   /*!< Максимальный размер буфера \a data очереди. */
-    u16 in;     /* Index of where to store next character */
-    u16 out;    /* Index of where to retrieve next character */
-    u16 chars;  /* Count of characters in queue */
+    char *data; /*!< Queue data pointer. */
+    u16 size;   /*!< Maximum size of data buffer a queue. */
+    u16 in;     /*!< Index of where to store next character. */
+    u16 out;    /*!< Index of where to retrieve next character. */
+    u16 chars;  /*!< Count of characters in queue. */
 } sio_queue_t;
 
-/*! \struct sio_addr_t
-    Структура хранения адресов регистров UART.
-*/
+/*!
+ * The structure of the store address registers of each UART.
+ */
 typedef struct SIO_ADDR {
-    u16 base;    /*!< Базовый адрес порта (буферы TX, RX, DLLB). */
-    u16 ier;     /*!< Базовый адрес IER/DLHB. */
-    u16 iir_fcr; /*!< Базовый адрес IIR/FCR. */
-    u16 lcr;     /*!< Базовый адрес LCR. */
-    u16 mcr;     /*!< Базовый адрес MCR. */
-    u16 lsr;     /*!< Базовый адрес LSR. */
-    u16 msr;     /*!< Базовый адрес MSR. */
+    u16 base;    /*!< Base address a UART (buffers TX, RX, DLLB). */
+    u16 ier;     /*!< Base address IER/DLHB. */
+    u16 iir_fcr; /*!< Base address IIR/FCR. */
+    u16 lcr;     /*!< Base address LCR. */
+    u16 mcr;     /*!< Base address MCR. */
+    u16 lsr;     /*!< Base address LSR. */
+    u16 msr;     /*!< Base address MSR. */
 } sio_addr_t;
 
+/*!
+ * Internal UART flags.
+ */
 typedef enum FLAGS {
-    F_BLOCK_MODE = 0x0001
+    F_BLOCK_MODE = 0x0001 /*!< The flag state, which means that the port is open in blocking mode. */
 } flags_t;
 
-/*! \struct sio_uart_t
-    Структура UART.
+/*!
+ * UART structure.
 */
 typedef struct SIO_UART {
-    sio_addr_t addr; /*!< Структура хранения адресов регистров UART. */
-    sio_queue_t rx;  /*!< Приемная очередь. */
-    sio_queue_t tx;  /*!< Передающая очередь. */
-    int flags;       /*!< Флаги (например влаги открытия и т.п.). */
+    sio_addr_t addr; /*!< Structure in which stored UART addresses. */
+    sio_queue_t rx;  /*!< Input queue. */
+    sio_queue_t tx;  /*!< Output queue. */
+    int flags;       /*!< Flags (eg. open mode flag, and etc. */
 } sio_uart_t;
 
 //--------------------------------------------------------------------------------------------------------//
-/*** ЛОКАЛЬНЫЕ ПЕРЕМЕННЫЕ ***/
+/*** Private variables ***/
 
-/* Базовые адреса, номера прерываний и маски прерываний портов. */
-static const int bases[4] = {0x03F8, 0x02F8, 0x00, 0x03E8};     /*!< Базовые адреса портов COM1,COM2,COM_PGM,COM4. */
-static const char intnums[4] = {0x0C, 0x0E, 0x14, 0x0C};        /*!< Номера прерываний от портов COM1,COM2,COM_PGM,COM4. */
-static const int intmasks[4] = {0x0010, 0x0040, 0x0400, 0x010}; /*!< Маски прерываний от портов COM1,COM2,COM_PGM,COM4
-                                                                     для контроллера прерываний. */
+/* Base addresses, interrupt numbers and masks. */
 
-static sio_uart_t *uarts[4] = {0, 0, 0, 0};            /*!< Пользовательский массив структур конфигураций COM1,COM2,COM_PGM,COM4. */
-static void (__interrupt *old_vecs[2])(void) = {0, 0}; /*!< Массив указателей на сохраненные векторы прерываний. */
+/*!
+ * COM1,COM2,COM_PGM,COM4 base addresses.
+ */
+static const int bases[4] = {0x03F8, 0x02F8, 0x00, 0x03E8};
+/*!
+ * COM1,COM2,COM_PGM,COM4 interrupts.
+ */
+static const char intnums[4] = {0x0C, 0x0E, 0x14, 0x0C};
+/*!
+ * COM1,COM2,COM_PGM,COM4 interrupt masks
+ * for interrupt controller.
+ */
+static const int intmasks[4] = {0x0010, 0x0040, 0x0400, 0x010};
+/*!
+ * An array of pointers to configuration COM1,COM2,COM_PGM,COM4.
+ */
+static sio_uart_t *uarts[4] = {0, 0, 0, 0};
+/*!
+ * An array of pointers to the old interrupt vectors.
+ */
+static void (__interrupt *old_vecs[2])(void) = {0, 0};
 
 #ifdef COM_PGM
+/*!
+ * Pointer to the PGM old interrupt vector.
+ */
 static void (__interrupt *old_vec_pgm)(void);
+/*!
+ * PGM old IER state.
+ */
 static int old_ier = 0;
+/*!
+ * PGM old LCR state.
+ */
 static int old_lcr = 0;
+/*!
+ * PGM old state.
+ */
 static int old_brd = 0;
 #endif
 
 //--------------------------------------------------------------------------------------------------------//
-/*** ПАБЛИК ПЕРЕМЕННЫЕ ***/
+/*** Public variables ***/
 
-int sioerrno = SIO_ERR_NONE; /*!< Код последней ошибки. */
+int sioerrno = SIO_ERR_NONE;
 
 //--------------------------------------------------------------------------------------------------------//
-/*** ЛОКАЛЬНЫЕ ФУНКЦИИ ***/
+/*** Private functions� ***/
 
-/*! \fn void com_vce_isr(sio_com_t nport)
-    Под-обработчик прерывания конкретного порта \a nport.
-    \param nport Номер порта.
-*/
+/*!
+ * Interrupt sub-handler a concrete of port \a nport.
+ * \param nport Port number as sio_com_t.
+ */
 static void com_vce_isr(sio_com_t nport)
 {
     int r;
@@ -241,7 +275,7 @@ static void com_vce_isr(sio_com_t nport)
 
         switch (SIO_IIR_ID_MASK & r) {
 
-            /* Modem Status Interrupt */
+        /* Modem Status Interrupt */
         case SIO_IIR_MSI:
             inp(uarts[nport]->addr.msr); // Just clear the interrupt
             break;
@@ -254,20 +288,21 @@ static void com_vce_isr(sio_com_t nport)
             /* Empty Transmitter Holding Register */
         case SIO_IIR_THREI:
             if (SIO_LSR_ETHR & inp(uarts[nport]->addr.lsr)) {
-                //передача 16 байт максимум
-                //экономим и используем r как итератор
+                // Transfer a maximum 16 byte.
+                // Use r variable as iterator (for economy).
                 for (r = 0; (r < 16) && (uarts[nport]->tx.chars > 0); ++r, uarts[nport]->tx.chars--) {
                     outp(uarts[nport]->addr.base, uarts[nport]->tx.data[uarts[nport]->tx.out++]);
-                    if (uarts[nport]->tx.out == uarts[nport]->tx.size)
-                        uarts[nport]->tx.out = 0;//количество байт в буфере tx_queue
+                    if (uarts[nport]->tx.out == uarts[nport]->tx.size) {
+                        uarts[nport]->tx.out = 0; // Number of bytes in tx queue.
+                    }
                 }
             }
             break;
 
             //case SIO_IIR_RDAI: /* Received Data Ready */
-            //читаем из FIFO предположительно 14 байт, т.к. прерывание настроено через каждые 14 байт
+            // Read from the FIFO 14-byte expected, as interrupt is set to every 14 bytes.
             //   for (int i = 0; i < 14; ++i) {
-            //        char c = inp(uarts[nport]->addr.base);//читаем символ из Rx
+            //        char c = inp(uarts[nport]->addr.base); // Read byte from UART.
             //        if (uarts[nport]->rx.chars < uarts[nport]->rx.size) {
             //
             //            uarts[nport]->rx.data[uarts[nport]->rx.in++] = c;
@@ -287,12 +322,13 @@ static void com_vce_isr(sio_com_t nport)
         case SIO_IIR_RDAI:
         case SIO_IIR_RDTO:
             while (SIO_LSR_DR & inp(uarts[nport]->addr.lsr)) { // Data Ready > 0x00
-                //экономим и используем r как результат чтения
-                r = inp(uarts[nport]->addr.base);//читаем символ из Rx
+                // Use r variable as read result (for economy).
+                r = inp(uarts[nport]->addr.base); // Read byte from UART.
                 if (uarts[nport]->rx.chars < uarts[nport]->rx.size) {
                     uarts[nport]->rx.data[uarts[nport]->rx.in++] = (char)r;
-                    if (uarts[nport]->rx.in == uarts[nport]->rx.size)
+                    if (uarts[nport]->rx.in == uarts[nport]->rx.size) {
                         uarts[nport]->rx.in = 0;
+                    }
                     uarts[nport]->rx.chars++;
                 }
             }
@@ -304,32 +340,42 @@ static void com_vce_isr(sio_com_t nport)
     }//while
 }
 
-/*! \fn void void interrupt handler1_4(__CPPARGS)
-    Обработчик прерываний портов COM1/COM4.
-*/
+/*!
+ * COM1/COM4 interrupt handler.
+ */
 static void __interrupt handler1_4(void)
 {
     _enable();
-    if (uarts[SIO_COM1]) { com_vce_isr(SIO_COM1); }
-    if (uarts[SIO_COM4]) { com_vce_isr(SIO_COM4); }
-    outpw(0xFF22, 0x000C);//сброс внешнего прерывания от INT0 UART, где 0x000C - EOI (End Of Interrupt)
+    if (uarts[SIO_COM1]) {
+        com_vce_isr(SIO_COM1);
+    }
+    if (uarts[SIO_COM4]) {
+        com_vce_isr(SIO_COM4);
+    }
+    // Reset the external interrupt INT0 UART,
+    // where 0x000C - EOI (End Of Interrupt)
+    outpw(0xFF22, 0x000C);
 }
 
-/*! \fn void void interrupt handler2(__CPPARGS)
-    Обработчик прерываний порта COM2.
-*/
+/*!
+ * COM2 interrupt handler.
+ */
 static void __interrupt handler2(void)
 {
     _enable();
-    if (uarts[SIO_COM2]) { com_vce_isr(SIO_COM2); }
-    outpw(0xFF22, 0x000E);//сброс внешнего прерывания от INT2 UART, где 0x000E - EOI (End Of Interrupt)
+    if (uarts[SIO_COM2]) {
+        com_vce_isr(SIO_COM2);
+    }
+    // Reset the external interrupt INT2 UART,
+    // where 0x000E - EOI (End Of Interrupt)
+    outpw(0xFF22, 0x000E);
 }
 
 #ifdef COM_PGM
 
-/*! \fn void interrupt handler_pgm(__CPPARGS)
-    Обработчик прерываний порта COM3 (для программирования, PGM).
-*/
+/*!
+ * PGM interrupt handler.
+ */
 static void __interrupt handler_pgm(void)
 {
     _enable();
@@ -338,46 +384,52 @@ static void __interrupt handler_pgm(void)
         //новое
         //передача
         if (0x0060 & r) {
-            if ( 0 == uarts[SIO_COM_PGM]->tx.chars)
-                outpw(uarts[SIO_COM_PGM]->addr.lcr, inpw(uarts[SIO_COM_PGM]->addr.lcr) & 0xF7FF);//конец передачи
-            else {
+            if ( 0 == uarts[SIO_COM_PGM]->tx.chars) {
+                // Enf of transmission.
+                outpw(uarts[SIO_COM_PGM]->addr.lcr, inpw(uarts[SIO_COM_PGM]->addr.lcr) & 0xF7FF);
+            } else {
                 outp(uarts[SIO_COM_PGM]->addr.iir_fcr, uarts[SIO_COM_PGM]->tx.data[uarts[SIO_COM_PGM]->tx.out++]);
-                if (uarts[SIO_COM_PGM]->tx.out == uarts[SIO_COM_PGM]->tx.size)
-                    uarts[SIO_COM_PGM]->tx.out = 0;//количество байт в буффере tx_queue
+                if (uarts[SIO_COM_PGM]->tx.out == uarts[SIO_COM_PGM]->tx.size) {
+                    uarts[SIO_COM_PGM]->tx.out = 0; // Number of bytes in tx queue.
+                }
                 uarts[SIO_COM_PGM]->tx.chars--;
             }
         }
-        //прием
+        // Receive.
         if (0x0010 & r) {
             r = inpw(uarts[SIO_COM_PGM]->addr.base);
             if (uarts[SIO_COM_PGM]->rx.chars < uarts[SIO_COM_PGM]->rx.size) {
                 uarts[SIO_COM_PGM]->rx.data[uarts[SIO_COM_PGM]->rx.in++] = (char)r;
-                if (uarts[SIO_COM_PGM]->rx.in == uarts[SIO_COM_PGM]->rx.size)
+                if (uarts[SIO_COM_PGM]->rx.in == uarts[SIO_COM_PGM]->rx.size) {
                     uarts[SIO_COM_PGM]->rx.in = 0;
+                }
                 uarts[SIO_COM_PGM]->rx.chars++;
             }
         }
+    } else {
+        //If have errors then reset it.
+        outpw(uarts[SIO_COM_PGM]->addr.lsr, 0x00F0 & r);
     }
-    else
-        outpw(uarts[SIO_COM_PGM]->addr.lsr, 0x00F0 & r);//если есть ошибки то их сбросить
-
-    outpw(0xFF22, 0x0014);//сброс прерывания от внутреннего UART CPU , где 0x0014 - EOI (End Of Interrupt)
+    // Reset interrupt from the internal UART CPU,
+    // where 0x0014 - EOI (End Of Interrupt)
+    outpw(0xFF22, 0x0014);
 }
 
 #endif //COM_PGM
 
 //--------------------------------------------------------------------------------------------------------//
-/*** ПАБЛИК ФУНКЦИИ ***/
+/*** Public functions ***/
 
-/*! \fn int sio_open(sio_com_t nport, sio_mode_t mode, int tx_buf_size, int rx_buf_size)
-    Открывает порт \a nport и создает для него буферы I/O:
-    передающий размером \a tx_buf_size и приемный размером \a rx_buf_size.
-    \param nport Номер порта.
-    \param mode Режим открытия.
-    \param tx_buf_size Размер передающего буфера порта, в байтах.
-    \param rx_buf_size Размер приемного буфера порта, в байтах.
-    \return -1 при ошибке.
-*/
+/*!
+ * Opens port \a nport with the desired \a mode.
+ * In the process of opening create internal an input and an
+ * output buffer of the specified size \a tx_buf_size and \a rx_buf_size.
+ * \param nport Port number as sio_com_t.
+ * \param mode Open mode as sio_mode_t.
+ * \param tx_buf_size Size of the output buffer of port, in bytes.
+ * \param rx_buf_size Size of the input buffer of port, in bytes.
+ * \return -1 on error.
+ */
 int sio_open(sio_com_t nport, sio_mode_t mode, int tx_buf_size, int rx_buf_size)
 {
     if (uarts[nport]) {
@@ -385,68 +437,76 @@ int sio_open(sio_com_t nport, sio_mode_t mode, int tx_buf_size, int rx_buf_size)
         return -1;
     }
 
-    uarts[nport] = (sio_uart_t *)calloc(1, sizeof(sio_uart_t));//создать структуру
-    if (!uarts[nport]) { //структура не создана?
-        sioerrno = SIO_ERR_NOT_MEMORY;//ошибка
+    // Create internel port structure.
+    uarts[nport] = (sio_uart_t *)calloc(1, sizeof(sio_uart_t));
+    if (!uarts[nport]) {
+        sioerrno = SIO_ERR_NOT_MEMORY;
         return -1;
     }
 
-    uarts[nport]->tx.data = (char *)calloc(1, tx_buf_size);//создать буфер TX
-    if (uarts[nport]->tx.data) {//буфер создан?
-        uarts[nport]->rx.data = (char *)calloc(1, rx_buf_size);//создать буфер RX
-        if (!uarts[nport]->rx.data) {//буфер не создан?
-            free(uarts[nport]->tx.data);//освободить буфере TX
+    // Create output port buffer.
+    uarts[nport]->tx.data = (char *)calloc(1, tx_buf_size);
+    if (uarts[nport]->tx.data) {
+        // Create input port buffer.
+        uarts[nport]->rx.data = (char *)calloc(1, rx_buf_size);
+        if (!uarts[nport]->rx.data) {
+            free(uarts[nport]->tx.data);
             uarts[nport]->tx.data = 0;
         }
     }
 
-    if (!(uarts[nport]->tx.data)) {//буфер RX или TX не созданы?
+    // Check existing a input and output buffers.
+    if (!(uarts[nport]->tx.data)) {
         free(uarts[nport]);
         uarts[nport] = 0;
-        sioerrno = SIO_ERR_NOT_MEMORY;//ошибка
+        sioerrno = SIO_ERR_NOT_MEMORY;
         return -1;
     }
 
-    uarts[nport]->rx.size = rx_buf_size;//сохранить размер буфера
+    // Save buffers size.
+    uarts[nport]->rx.size = rx_buf_size;
     uarts[nport]->tx.size = tx_buf_size;
 
     sioerrno = SIO_ERR_NONE;
 
-    //установить режим
-    if (SIO_BLOCK_MODE == mode) { uarts[nport]->flags |= F_BLOCK_MODE; }
+    // Set open mode.
+    if (SIO_BLOCK_MODE == mode) {
+        uarts[nport]->flags |= F_BLOCK_MODE;
+    }
 
-#ifdef COM_PGM // конфигурация порта PGM
+#ifdef COM_PGM // PGM configure.
 
     if (SIO_COM_PGM == nport) {
-        //адреса регистров регистров RX TX
-        uarts[SIO_COM_PGM]->addr.base = 0xFF86;//Serial Port Receive Register
-        uarts[SIO_COM_PGM]->addr.iir_fcr = 0xFF84;//Serial Port Transmit Register
-        //адреса управляющих регистров
-        uarts[SIO_COM_PGM]->addr.ier = 0xFF44; //Serial Port Interrupt Control Register
-        uarts[SIO_COM_PGM]->addr.lcr = 0xFF80; //Serial Port Control Register
-        uarts[SIO_COM_PGM]->addr.lsr = 0xFF82; //Serial Port Status Register
-        uarts[SIO_COM_PGM]->addr.mcr = 0xFF88; //Serial Port Baud Rate Divisor Register
+        // Addresses of RX and TX registers.
+        uarts[SIO_COM_PGM]->addr.base = 0xFF86;    // Receive Register.
+        uarts[SIO_COM_PGM]->addr.iir_fcr = 0xFF84; // Transmit Register.
+        // Addresses of control regisrets.
+        uarts[SIO_COM_PGM]->addr.ier = 0xFF44; // Interrupt Control Register.
+        uarts[SIO_COM_PGM]->addr.lcr = 0xFF80; // Control Register.
+        uarts[SIO_COM_PGM]->addr.lsr = 0xFF82; // Status Register.
+        uarts[SIO_COM_PGM]->addr.mcr = 0xFF88; // Baud Rate Divisor Register.
         _disable();
-        //здесь хранятся старые значения регистров
+        // Save old registers state.
         old_ier = inpw(uarts[SIO_COM_PGM]->addr.ier);
         old_lcr = inpw(uarts[SIO_COM_PGM]->addr.lcr);
-        old_brd = inpw(uarts[SIO_COM_PGM]->addr.mcr);//сохранить старую скорость
-        //прерывание
-        outpw(0xFF28, (inpw(0xFF28) | intmasks[SIO_COM_PGM]));//запретить прерывание
+        old_brd = inpw(uarts[SIO_COM_PGM]->addr.mcr); // Old baud rate.
+        // Interrupts.
+        outpw(0xFF28, (inpw(0xFF28) | intmasks[SIO_COM_PGM])); // Disable UART interrupts.
         _enable();
-        old_vec_pgm = _dos_getvect(intnums[SIO_COM_PGM]);//сохранить старый вектор прерывание
-        _dos_setvect(intnums[SIO_COM_PGM], handler_pgm);//установить новое прерывание
-        //конфигурация
-        outpw(uarts[SIO_COM_PGM]->addr.lcr, 0x0417);//RXIE, WLGN, TMOD, RSIE, RMODE
-        outpw(0xFF22, 0x0014);//сброс прерывание от UART
+        old_vec_pgm = _dos_getvect(intnums[SIO_COM_PGM]); // Save old interrupt vector.
+        _dos_setvect(intnums[SIO_COM_PGM], handler_pgm);  // Set new interrupt vector.
+        // Configuring.
+        outpw(uarts[SIO_COM_PGM]->addr.lcr, 0x0417); // RXIE, WLGN, TMOD, RSIE, RMODE.
+        outpw(0xFF22, 0x0014);// Reset UART interrupts.
         outpw(uarts[SIO_COM_PGM]->addr.ier, 0x0017);// Interrupt enable
-        outpw(0xFF28, inpw(0xFF28) & (~intmasks[SIO_COM_PGM]));//разрешить прерывание от UART
+        outpw(0xFF28, inpw(0xFF28) & (~intmasks[SIO_COM_PGM]));// Enable UART interrupts.
         return 0;
     }
 
 #endif
 
-    uarts[nport]->addr.base = bases[nport];//адреса регистров
+    // "Standard" UART configure.
+    uarts[nport]->addr.base = bases[nport];
     uarts[nport]->addr.ier = bases[nport] + SIO_OFFSET_IER;
     uarts[nport]->addr.iir_fcr = bases[nport] + SIO_OFFSET_IIR;
     uarts[nport]->addr.lcr = bases[nport] + SIO_OFFSET_LCR;
@@ -454,22 +514,23 @@ int sio_open(sio_com_t nport, sio_mode_t mode, int tx_buf_size, int rx_buf_size)
     uarts[nport]->addr.lsr = bases[nport] + SIO_OFFSET_LSR;
     uarts[nport]->addr.msr = bases[nport] + SIO_OFFSET_MSR;
 
-    outp(uarts[nport]->addr.ier, 0x00);//disable interrupt
+    outp(uarts[nport]->addr.ier, 0x00);// Disable interrupt.
+    // Check UART exists.
     if (inp(uarts[nport]->addr.ier)) {
-        free(uarts[nport]->tx.data);//освободить буфер TX
-        free(uarts[nport]->rx.data);//освободить буфер RX
-        free(uarts[nport]);//освободить структуру
+        free(uarts[nport]->tx.data);
+        free(uarts[nport]->rx.data);
+        free(uarts[nport]);
         uarts[nport] = 0;
         sioerrno = SIO_ERR_NO_UART;
         return -1;
     }
 
-    //установить FIFO
-    outp(uarts[nport]->addr.iir_fcr, SIO_FCR_CRF | SIO_FCR_CTF);//очистить FIFO
-    outp(uarts[nport]->addr.iir_fcr, 0xC0);//установить trigger level = 14
-    outp(uarts[nport]->addr.iir_fcr, SIO_FCR_EF);//включить
+    // Configure FIFO.
+    outp(uarts[nport]->addr.iir_fcr, SIO_FCR_CRF | SIO_FCR_CTF); // Clear FIFO.
+    outp(uarts[nport]->addr.iir_fcr, 0xC0);                      // Set FIFO's trigger level = 14.
+    outp(uarts[nport]->addr.iir_fcr, SIO_FCR_EF);                // Enable FIFO.
 
-    /// ДОДЕЛАТЬ ПОТОМ!!!!
+    // FIXME: Finish in the future.
     /*if (var_2 == 1)
     {
         _disable();
@@ -484,25 +545,29 @@ int sio_open(sio_com_t nport, sio_mode_t mode, int tx_buf_size, int rx_buf_size)
         _enable();
     }*/
 
-    /* настроить прерывания uart */
-    //Enable Received Data Available Interrupt, Enable Transmitter Holding Register Empty Interrupt
+    /* Configuring "standard" UART interrupts. */
+
+    // Enable Received Data Available Interrupt,
+    // Enable Transmitter Holding Register Empty Interrupt
     outp(uarts[nport]->addr.ier, SIO_IER_ERDAI | SIO_IER_ETHREI);
 
-    // COM1 и/или COM4
+    // COM1 and/or COM4
     if (((SIO_COM1 == nport) && (!uarts[SIO_COM4]))
             || ((SIO_COM4 == nport) && (!uarts[SIO_COM1]))) {
 
         _disable();
-        outpw(0xFF22, 0x0C);////сброс внешние прерывание от INT0
-        outpw(0xFF28, (inpw(0xFF28) | intmasks[nport]));//отключить внешнее прерывание
+        outpw(0xFF22, 0x0C); // Reset external interrups from  INT0.
+        outpw(0xFF28, (inpw(0xFF28) | intmasks[nport])); // Disable external interupt.
         _enable();
 
-        old_vecs[0] = _dos_getvect(intnums[nport]);//сохранить старый вектор прерывания
-        _dos_setvect(intnums[nport], handler1_4);//установить новое прерывание
+        old_vecs[0] = _dos_getvect(intnums[nport]); // Save old interrupt vector.
+        _dos_setvect(intnums[nport], handler1_4);   // Set new interrupt vector.
 
         _disable();
-        outpw(0xFF38, (inpw(0xFF38) | 0xCF));//прерывание инициировано нижним уровнем к высокому краю, Включите специальному полностью вложенному режиму INT0
-        outpw(0xFF28, (inpw(0xFF28) & (~intmasks[nport]))); //включить внешнее прерывание от INT0
+        // Interrupt initiated by the lower level to high end,
+        // including a special fully nested mode INT0
+        outpw(0xFF38, (inpw(0xFF38) | 0xCF));
+        outpw(0xFF28, (inpw(0xFF28) & (~intmasks[nport]))); // Enable external interrups from INT0.
         _enable();
 
         uarts[nport]->flags |= F_BLOCK_MODE;
@@ -512,41 +577,44 @@ int sio_open(sio_com_t nport, sio_mode_t mode, int tx_buf_size, int rx_buf_size)
     // COM2
     if (SIO_COM2 == nport) {
         _disable();
-        outpw(0xFF22,0x0E);//сброс внешние прерывание от INT2
-        outpw(0xFF28, (inpw(0xFF28) | intmasks[nport]));//отключить внешнее прерывание
+        outpw(0xFF22,0x0E); // Reset external interrups from  INT2.
+        outpw(0xFF28, (inpw(0xFF28) | intmasks[nport])); // Disable external interupt.
         _enable();
 
-        old_vecs[1] = _dos_getvect(intnums[nport]);//сохранить старый вектор прерывание
-        _dos_setvect(intnums[nport],handler2);//установить новое прерывание
+        old_vecs[1] = _dos_getvect(intnums[nport]); // Save old interrupt vector.
+        _dos_setvect(intnums[nport],handler2);      // Set new interrupt vector.
 
         _disable();
-        outpw(0xFF28, (inpw(0xFF28) & (~intmasks[nport]))); //включить внешнее прерывание от INT2
+        outpw(0xFF28, (inpw(0xFF28) & (~intmasks[nport]))); // Enable external interrups from INT2.
         _enable();
     }
     return 0;
 }
 
-/*! \fn int sio_configure(sio_com_t nport, sio_speed_t baud, sio_parity_t parity, sio_databits_t databits, sio_stopbits_t stopbits)
-    Конфигурирует открытый порт \a nport, т.е. устанавливает:
-    скорость \a baud, паритет \a parity, кол-во бит данных \a databits, кол-во стоп-бит \a stopbits.
-    \param nport Номер порта.
-    \param baud Скорость.
-    \param parity Паритет.
-    \param databits Биты данных.
-    \param stopbits Стоп биты.
-    \return -1 при ошибке.
-*/
+/*!
+ * Configures an open port \a nport, and sets desired
+ * rate \a baud, parity \a parity, number of data bits \a databits,
+ * number of stop bits \a stopbits.
+ * \param nport Port number as sio_com_t.
+ * \param baud Desired rate as sio_speed_t.
+ * \param parity Desired parity as sio_parity_t.
+ * \param databits Desired data bits as sio_databits_t.
+ * \param stopbits Desired stop bits as sio_stopbits_t.
+ * \return -1 on error.
+ */
 int sio_configure(sio_com_t nport, sio_speed_t baud, sio_parity_t parity, sio_databits_t databits, sio_stopbits_t stopbits)
 {
-    if (!uarts[nport]) { return -1; }
+    if (!uarts[nport]) {
+        return -1;
+    }
 
-    sioerrno = SIO_ERR_ILLEGAL_SETTING;//ошибка
+    sioerrno = SIO_ERR_ILLEGAL_SETTING; // Forse error set.
 
-#ifdef COM_PGM // конфигурация порта PGM
+#ifdef COM_PGM // PGM configure.
 
     if (SIO_COM_PGM == nport) {
         _disable();
-        switch (baud) {//установка baud
+        switch (baud) {
         case SIO_BPS_50: outpw(uarts[SIO_COM_PGM]->addr.mcr, 24999); break;
         case SIO_BPS_300: outpw(uarts[SIO_COM_PGM]->addr.mcr, 4165); break;
         case SIO_BPS_600: outpw(uarts[SIO_COM_PGM]->addr.mcr, 2082); break;
@@ -560,27 +628,27 @@ int sio_configure(sio_com_t nport, sio_speed_t baud, sio_parity_t parity, sio_da
         default:;
         }
 
-        int r = inpw(uarts[SIO_COM_PGM]->addr.lcr) & 0xFF87; //очистка битов
-        switch (parity) {//установка parity
+        int r = inpw(uarts[SIO_COM_PGM]->addr.lcr) & 0xFF87; // Clear bits.
+        switch (parity) {
         case SIO_PAR_NONE: break;
         case SIO_PAR_EVEN: r |= 0x0060; break;
         case SIO_PAR_ODD: r |= 0x0040; break;
         default: return -1;
         }
 
-        switch (databits) {//установка databits
+        switch (databits) {
         case SIO_DATA7: break;
         case SIO_DATA8: r |= 0x0010; break;
         default: return -1;
         }
 
-        switch (stopbits) {//установка stopbits
+        switch (stopbits) {
         case SIO_STOP1: break;
         case SIO_STOP2: r |= 0x0008; break;
         default:;
         }
 
-        outpw (uarts[SIO_COM_PGM]->addr.lcr, r);//записать установки
+        outpw (uarts[SIO_COM_PGM]->addr.lcr, r); // Set new parameters.
         _enable();
 
         sioerrno = SIO_ERR_NONE;
@@ -589,27 +657,32 @@ int sio_configure(sio_com_t nport, sio_speed_t baud, sio_parity_t parity, sio_da
 
 #endif
 
+    // Configure "standard" UART.
     _disable();
-    outp(uarts[nport]->addr.lcr, (inp(uarts[nport]->addr.lcr) | SIO_LCR_DLAB));/*1 = DLLB, DLHB accessible.*/
-    outpw(uarts[nport]->addr.base, baud);//установить скорость
-    outp(uarts[nport]->addr.lcr, (inp(uarts[nport]->addr.lcr) & (~SIO_LCR_DLAB)));/*0 = RB accessible*/
+    // 1 = DLLB, DLHB accessible.
+    outp(uarts[nport]->addr.lcr, (inp(uarts[nport]->addr.lcr) | SIO_LCR_DLAB));
+    // Set baud rate.
+    outpw(uarts[nport]->addr.base, baud);
+    // 0 = RB accessible.
+    outp(uarts[nport]->addr.lcr, (inp(uarts[nport]->addr.lcr) & (~SIO_LCR_DLAB)));
     _enable();
 
     _disable();
-    outp(uarts[nport]->addr.lcr, (parity | databits | stopbits));//остальные настройки порта
+    // Set other's parameters.
+    outp(uarts[nport]->addr.lcr, (parity | databits | stopbits));
     _enable();
 
     sioerrno = SIO_ERR_NONE;
     return 0;
 }
 
-/*! \fn int sio_send(sio_com_t nport, const char *buf, int len)
-    Передает в порт \a nport массив байт \a buf длиной \a len.
-    \param nport Номер порта.
-    \param buf Указатель на массив байт.
-    \param len Кол-во байт для передачи.
-    \return -1 при ошибке или кол-во переданных байт.
-*/
+/*!
+ * Send to port \a nport byte array \a buf of length \a len.
+ * \param nport Port number as sio_com_t.
+ * \param buf A pointer to an array of bytes.
+ * \param len Number of bytes to transfer.
+ * \return -1 on error or number of bytes transferred.
+ */
 int sio_send(sio_com_t nport, const char *buf, int len)
 {
     if (!uarts[nport]) { return -1; }
@@ -619,47 +692,53 @@ int sio_send(sio_com_t nport, const char *buf, int len)
 
     for (;;) {
 
-        _disable();//откл прерывание
+        _disable();
 
-        /// Этот код в силе при отключенных прерываниях!!!
+        // This code is valid for disabling interrupts!!!
         int bytes_to_write = ((uarts[nport]->tx.chars + len) > uarts[nport]->tx.size) ?
                     (uarts[nport]->tx.size - uarts[nport]->tx.chars) : (len);
 
         if (bytes_to_write) {
 
-            //сколько копировать в буфер? это на границе кольцевого буфера?
+            // How many to copy to the ring buffer?
+            // It is on the border of the ring buffer?
             int sizecpy = ((uarts[nport]->tx.in + bytes_to_write) <= uarts[nport]->tx.size) ?
                         (bytes_to_write) : (uarts[nport]->tx.size - uarts[nport]->tx.in);
-            //копируем до границы кольцевого буфера
+
+            // Copy to the boundary of the ring buffer
             memcpy(uarts[nport]->tx.data + uarts[nport]->tx.in, buf, sizecpy);
 
-            if (sizecpy < bytes_to_write) {//это не все?
-                sizecpy = bytes_to_write - sizecpy;//вычисляем остаток
-                uarts[nport]->tx.in = 0;// начало буфера
-                //копируем остаток в начало кольцевого буфера
+            if (sizecpy < bytes_to_write) { // This is not all?
+                sizecpy = bytes_to_write - sizecpy; // Compute the remainder.
+                uarts[nport]->tx.in = 0; // Beginning of the buffer.
+                // Copy the remainder to the beginning of the ring buffer.
                 memcpy(uarts[nport]->tx.data, buf + (bytes_to_write - sizecpy), sizecpy);
             }
-            uarts[nport]->tx.in += sizecpy; //указатель на пустую ячейку кольцевого буфера
-            uarts[nport]->tx.chars += bytes_to_write;  //добавляем количество байт для передачи
-            //указатель на пустую ячейку кольцевого буфера за пределами размера буфера?
-            if (uarts[nport]->tx.in >= uarts[nport]->tx.size)
-                uarts[nport]->tx.in = 0;
 
-            //запуск прерывания по передаче
-#ifdef COM_PGM // передача порт PGM
-            if (SIO_COM_PGM == nport) {
-                if (!(inpw(uarts[SIO_COM_PGM]->addr.lcr) & 0x0800))
-                    outpw(uarts[SIO_COM_PGM]->addr.lcr, inpw(uarts[SIO_COM_PGM]->addr.lcr) | 0x0800);
+            uarts[nport]->tx.in += sizecpy; // A pointer to an next empty cell, the ring buffer.
+            uarts[nport]->tx.chars += bytes_to_write; // Increment number of bytes for transfer.
+
+            // A pointer to an empty cell, the ring buffer outside the buffer size?
+            if (uarts[nport]->tx.in >= uarts[nport]->tx.size) {
+                uarts[nport]->tx.in = 0;
             }
-            else {
+
+            // Start interrupt for transfer.
+#ifdef COM_PGM // PGM transfer.
+            if (SIO_COM_PGM == nport) {
+                if (!(inpw(uarts[SIO_COM_PGM]->addr.lcr) & 0x0800)) {
+                    outpw(uarts[SIO_COM_PGM]->addr.lcr, inpw(uarts[SIO_COM_PGM]->addr.lcr) | 0x0800);
+                }
+            } else {
 #endif
-                if (inp(uarts[nport]->addr.lsr) & 0x20) {//нет передачи?
+                if (inp(uarts[nport]->addr.lsr) & 0x20) { // No transmission?
                     uarts[nport]->tx.chars--;
-                    // передача байта
+                    // Byte transfer.
                     outp(uarts[nport]->addr.base, uarts[nport]->tx.data[uarts[nport]->tx.out++]);
-                    //указатель передачи за границей буфера?
-                    if (uarts[nport]->tx.out == uarts[nport]->tx.size)
+                    // Transmission pointer a buffer is out boundary?
+                    if (uarts[nport]->tx.out == uarts[nport]->tx.size) {
                         uarts[nport]->tx.out = 0;
+                    }
                 }
 #ifdef COM_PGM
             }
@@ -667,85 +746,95 @@ int sio_send(sio_com_t nport, const char *buf, int len)
 
         }//bytes_to_write > 0
 
-        _enable();//вкл прерывание
+        _enable();
 
         bytes_written += bytes_to_write;
         len -= bytes_to_write;
 
         if (is_block_mode) {
-            if (!len)
+            if (!len) {
                 break;
-        }
-        else
+            }
+        } else {
             break;
+        }
     }
     return bytes_written;
 }
 
-/*! \fn int sio_recv(sio_com_t nport, char *buf, int len)
-    Принимает из порта \a nport массив байт \a buf длиной \a len.
-    \param nport Номер порта.
-    \param buf Указатель на массив байт.
-    \param len Кол-во байт для передачи.
-    \return -1 при ошибке.
-*/
+/*!
+ * Received from the port \a nport byte array \a buf of length \a len.
+ * \param nport Port number as sio_com_t.
+ * \param buf A pointer to an array of bytes.
+ * \param len Number of bytes to receive.
+ * \return -1 on error.
+ */
 int sio_recv(sio_com_t nport, char *buf, int len)
 {
-    if (!uarts[nport]) { return -1; }
+    if (!uarts[nport]) {
+        return -1;
+    }
 
     int bytes_readed = 0;
     int is_block_mode = (F_BLOCK_MODE & uarts[nport]->flags);
 
     for (;;) {
 
-        _disable();//откл прерывание
+        _disable();
 
-        /// Этот код в силе при отключенных прерываниях!!!
+        // This code is valid for disabling interrupts!!!
         int bytes_to_read = (uarts[nport]->rx.chars > len) ? (len) : (uarts[nport]->rx.chars);
 
         if (bytes_to_read) {
 
-            //сколько копировать в буфер? эта на границе кольцевого буфера?
+            // How many to copy to the ring buffer?
+            // It is on the border of the ring buffer?
             int sizecpy = ((uarts[nport]->rx.out + bytes_to_read) <=  uarts[nport]->rx.size) ?
                         (bytes_to_read) : (uarts[nport]->rx.size - uarts[nport]->rx.out);
-            //копируем до границе кольцевого буфера
+
+            // Copy to the boundary of the ring buffer.
             memcpy(buf, uarts[nport]->rx.data + uarts[nport]->rx.out, sizecpy);
-            if (sizecpy < bytes_to_read) {//это не все?
-                sizecpy = bytes_to_read - sizecpy;//вычисляем остаток
-                uarts[nport]->rx.out = 0;// начало буфера
-                //копируем остаток в начало кольцевого буфера
+
+            if (sizecpy < bytes_to_read) { // This is not all?
+                sizecpy = bytes_to_read - sizecpy; // Compute the remainder.
+                uarts[nport]->rx.out = 0; // Beginning of the buffer.
+                // Copy the remainder to the beginning of the ring buffer.
                 memcpy(buf + (bytes_to_read - sizecpy), uarts[nport]->rx.data, sizecpy);
             }
-            uarts[nport]->rx.out += sizecpy; //указатель на пустую ячейку кольцевого буфера
-            uarts[nport]->rx.chars -= bytes_to_read;  //количество байт в приемном буфере
 
-            //указатель на ячейку кольцевого буфера за пределами размера буфера?
-            if (uarts[nport]->rx.out >= uarts[nport]->rx.size)
+            uarts[nport]->rx.out += sizecpy; // A pointer to an next empty cell, the ring buffer.
+            uarts[nport]->rx.chars -= bytes_to_read; // Increment number of bytes for transfer.
+
+            // A pointer to an empty cell, the ring buffer outside the buffer size?
+            if (uarts[nport]->rx.out >= uarts[nport]->rx.size) {
                 uarts[nport]->rx.out = 0;
+            }
 
         }//bytes_to_read > 0
 
-        _enable();//вкл прерывание
+        _enable();
 
         bytes_readed += bytes_to_read;
         len -= bytes_to_read;
 
         if (is_block_mode) {
-            if (!len)
+            if (!len) {
                 break;
-        }
-        else
+            }
+        } else {
             break;
+        }
     }
     return bytes_readed;
 }
 
-/*! \fn int sio_clear(sio_com_t nport, sio_dir_t dir)
-    Очишает передающую/принимающую \a dir очередь порта \a nport.
-    \param nport Номер порта.
-    \param dir Направление прием/передача (можно по ИЛИ их установить!).
-    \return -1 при ошибке.
-*/
+/*!
+ * Clears a queue transmitting or receiving of port \a nport
+ * depending on a parameter \a dir.
+ * \param nport Port number as sio_com_t.
+ * \param dir Direction of the transmit/receive as sio_dir_t (you can install them on the OR).
+ * \return -1 on error.
+ */
 int sio_clear(sio_com_t nport, sio_dir_t dir)
 {
     if (uarts[nport] /*sio_exists(nport)*/ ) {
@@ -764,27 +853,29 @@ int sio_clear(sio_com_t nport, sio_dir_t dir)
     return -1;
 }
 
-/*! \fn int sio_rx_available(sio_com_t nport)
-    Возвращает кол-во байт порта \a nport доступных для чтения.
-    \param nport Номер порта.
-    \return Кол-во доступных для чтения байт.
-*/
+/*!
+ * Returns number of bytes in the port \a nport available to read.
+ * \param nport Port number as sio_com_t.
+ * \return Number of bytes available for reading or 0 on error.
+ */
 int sio_rx_available(sio_com_t nport)
 {
     return (uarts[nport]) ? (uarts[nport]->rx.chars) : (0);
 }
 
-/*! \fn void sio_close(sio_com_t nport)
-    Закрывает порт \a nport.
-    \param nport Номер порта.
-*/
+/*!
+ * Close a port \a nport.
+ * \param nport Port number as sio_com_t.
+ */
 void sio_close(sio_com_t nport)
 {
-    if (!uarts[nport]) { return; }
+    if (!uarts[nport]) {
+        return;
+    }
 
     int is_block_mode = (F_BLOCK_MODE & uarts[nport]->flags);
 
-    //ждем конца передачи
+    // Wait end of transfer.
     if (is_block_mode) {
         while (uarts[nport]->tx.chars > 0) {}
         while (!(inpw(uarts[SIO_COM_PGM]->addr.lsr) & SIO_LSR_ETHR)) {}
@@ -792,51 +883,58 @@ void sio_close(sio_com_t nport)
 
     ///sio_clear(nport, SIO_TX_DIRECTION | SIO_RX_DIRECTION);/// ???
 
-#ifdef COM_PGM // закрыть порт PGM
+#ifdef COM_PGM // PGM close.
     if (SIO_COM_PGM == nport) {
         _disable();
-        outpw(0xFF28, (inpw(0xFF28) | intmasks[SIO_COM_PGM]));//запретить прерывание
-        //прерывание
-        _dos_setvect(intnums[SIO_COM_PGM], old_vec_pgm);//вернуть старое прерывание
-        //вернуть старою конфигурацию
-        outpw(uarts[SIO_COM_PGM]->addr.ier, old_ier);// Interrupt enable
-        outpw(uarts[SIO_COM_PGM]->addr.mcr, old_brd);// старая скорость
-        outpw(uarts[SIO_COM_PGM]->addr.lcr, old_lcr);// старая конфигурация
-        outpw(0xFF22, 0x0014);//сброс прерывание от UART
-        outpw(0xFF28, inpw(0xFF28) & (~intmasks[SIO_COM_PGM]));//разрешить прерывание от UART
+        outpw(0xFF28, (inpw(0xFF28) | intmasks[SIO_COM_PGM])); // Disable UART interrupt.
+        // Interrupts.
+        _dos_setvect(intnums[SIO_COM_PGM], old_vec_pgm); // Restore old interrupt vector.
+        // Restore old configuration.
+        outpw(uarts[SIO_COM_PGM]->addr.ier, old_ier); // Interrupt enable
+        outpw(uarts[SIO_COM_PGM]->addr.mcr, old_brd); // Restore old baud rate.
+        outpw(uarts[SIO_COM_PGM]->addr.lcr, old_lcr); // Restore old configuration.
+        outpw(0xFF22, 0x0014); //Reset UART interrupt.
+        outpw(0xFF28, inpw(0xFF28) & (~intmasks[SIO_COM_PGM])); // Enable UART interrupt.
         _enable();
-    }
-    else {
+    } else {
 #endif
-        //отключить прерывание uart
-        outp(uarts[nport]->addr.ier, 0x00);//disable interrupt
-        outp(uarts[nport]->addr.iir_fcr, (inpw(uarts[nport]->addr.iir_fcr) & (~SIO_FCR_EF)));//отключить FIFO
-        //COM1 и/или COM4
+        // Disable UART interrupt.
+        outp(uarts[nport]->addr.ier, 0x00);
+        // Disable FIFO.
+        outp(uarts[nport]->addr.iir_fcr, (inpw(uarts[nport]->addr.iir_fcr) & (~SIO_FCR_EF)));
+
+        // COM1 and/or COM4
         if (((SIO_COM1 == nport) && (!uarts[SIO_COM4]))
-                || ((SIO_COM4 == nport) && (!uarts[SIO_COM1]))) {//это COM1 и COM4 не открыт или это COM4 и COM1 не открыт?
-            //отключить внешнее прерывание от микросхемы uart
+                || ((SIO_COM4 == nport) && (!uarts[SIO_COM1]))) {// COM1 open and COM4 not open,
+                                                                 // COM4 open and COM1 not open?
+
             _disable();
-            outpw(0xFF28, (inpw(0xFF28) | intmasks[nport]));//отключить внешнее прерывание
+            outpw(0xFF28, (inpw(0xFF28) | intmasks[nport])); // Disable external UART interrupt.
             _enable();
-            if (old_vecs[0])
-                _dos_setvect(intnums[nport], old_vecs[0]);//вернуть старое прерывание
+
+            if (old_vecs[0]) {
+                _dos_setvect(intnums[nport], old_vecs[0]); // Restore old interrupt vector.
+            }
         }
+
         // COM2
         if (SIO_COM2 == nport) {
-            //отключить внешнее прерывание от микросхемы uart
+
             _disable();
-            outpw(0xFF28, (inpw(0xFF28) | intmasks[nport]));//отключить внешнее прерывание
+            outpw(0xFF28, (inpw(0xFF28) | intmasks[nport])); // Disable external UART interrupt.
             _enable();
-            if (old_vecs[1])
-                _dos_setvect(intnums[nport], old_vecs[1]);//вернуть старое прерывание
+
+            if (old_vecs[1]) {
+                _dos_setvect(intnums[nport], old_vecs[1]); // Restore old interrupt vector.
+            }
         }
 #ifdef COM_PGM
     }
 #endif
 
-    free(uarts[nport]->tx.data);//освободить буфер TX
-    free(uarts[nport]->rx.data);//освободить буфер RX
-    free(uarts[nport]);//освободить структуру
+    free(uarts[nport]->tx.data);
+    free(uarts[nport]->rx.data);
+    free(uarts[nport]);
     uarts[nport] = 0;
 }
 
