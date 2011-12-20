@@ -1,10 +1,11 @@
 /*********************************************************************************************
-Project:
-Version:
-Date: 24.03.2011
-Author: Oleg Diyakonov, Denis Shienkov
-Company:
-Comments: A library for work with serial ports in your controllers ADAM 5510.
+Project :
+Version :
+Date    : 24.03.2011
+Author  : Oleg Diyakonov, Denis Shienkov
+Company :
+Comments: A library for work with serial ports in your controllers ADAM 5000 series.
+License : New BSD
 **********************************************************************************************/
 
 /*! \file sio.cpp
