@@ -2,18 +2,18 @@
 Project :
 Version :
 Date    : 30.03.2011
-Author  : Шиенков Д.И.
+Author  : Denis Shienkov 
 Company :
 Comments: 
 License : New BSD
 **********************************************************************************************/
 
 /*! \file mio.h
-
-  Аббревиатура модуля (файла) "mio" - Module Input Output.
-
-
-*/
+ *
+ * Abbreviation of the module (file) "mio" - Module Input Output.
+ *
+ *
+ */
 
 #ifndef MIO_H
 #define MIO_H
