@@ -20,7 +20,7 @@ License : New BSD
 #ifndef SIO_H
 #define SIO_H
 
-#include "typedefs.h"
+#include "platformdefs.h"
 
 #ifdef __cplusplus
 extern "C" {

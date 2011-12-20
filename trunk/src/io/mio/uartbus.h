@@ -20,6 +20,8 @@ License : New BSD
 #ifndef UARTBUS_H
 #define UARTBUS_H
 
+#include "platformdefs.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
