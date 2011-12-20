@@ -2,18 +2,17 @@
 Project :
 Version :
 Date    : 24.03.2011
-Author  : Шиенков Д.И.
+Author  : Denis Shienkov 
 Company :
 Comments:
 License : New BSD
 **********************************************************************************************/
 
 /*! \file uartbus.cpp
-
-    Аббревиатура модуля (файла) "uartbus" - UART Bus.
-
-
-*/
+ *
+ * Abbreviation of the module (file) "uartbus" - UART Bus.
+ *
+ */
 
 #include <conio.h>
 #include "uartbus.h"
@@ -22,10 +21,11 @@ License : New BSD
 
 
 
-/*! \fn void uart_bus_init(int base)
-    Инициализирует UART шину модуля с базовым адресом \a base.
-    \param base Базовый адрес модуля (слота).
-*/
+/*! 
+ * Initializes the UART bus module with base address \a base.
+ * \param base The base address of the module slot.
+ * See base module address in mio.cpp.
+ */
 void uart_bus_init(int base)
 {
     base += 3; //base + 3
@@ -44,10 +44,11 @@ void uart_bus_init(int base)
     outp(base, 0x07);
 }
 
-/*! \fn void uart_bus_reset(int base)
-    Сбрасывает или очищает UART шину модуля с базовым адресом \a base.
-    \param base Базовый адрес модуля (слота).
-*/
+/*! 
+ * Resets or clears the UART bus module with base address \a base.
+ * \param base The base address of the module slot.
+ * See base module address in mio.cpp.
+ */
 void uart_bus_reset(int base)
 {
     outp((base += 6), 0x01);
@@ -55,38 +56,41 @@ void uart_bus_reset(int base)
     outp(base, 0x00);
 }
 
-/*! \fn int uart_bus_tx_empty(int base)
-    Проверяет возможность отправки в UART шину модуля с базовым адресом \a base
-    данных, т.е. проверяет, пуст ли TX FIFO буфер UART.
-    \param base Базовый адрес модуля (слота).
-    \return 0 Буфер не пуст.
-*/
+/*! 
+ * Checks the possibility of sending a UART bus module with base address 
+ * \a base data, ie checks whether empty TX FIFO buffer UART.
+ * \param base The base address of the module slot.
+ * See base module address in mio.cpp.
+ * \return 0 if FIFO is not empty.
+ */
 int uart_bus_tx_empty(int base)
 {
     outp(base + 4, 0x05);
     return ((inpw(base + 3) & 0x60) == 0x60);
 }
 
-/*! \fn void uart_bus_tx(int base, const char *c)
-    Отправляет в UART шину модуля с базовым адресом \a base
-    один символ \a с.
-    \note Перед отправкой символа необходимо ОБЯЗАТЕЛЬНО убедиться (дождаться)
-    что передающий TX FIFO буфер UART пуст (uart_bus_tx_empty()), и только после этого отправлять символ!!!
-    \param base Базовый адрес модуля (слота).
-    \param c Указатель на конкретный символ в каком-то внешнем
-    буфере в котором имеются данные для передачи.
-*/
+/*! 
+ * Sends the UART bus module with base address \a base one character \a c.
+ * \note Before sending a character must always make sure (wait) that the
+ * transmitting UART TX FIFO buffer is empty uart_bus_tx_empty(), and 
+ * only then send the character!
+ * \param base The base address of the module slot.
+ * See base module address in mio.cpp.
+ * \param c A pointer to a particular character in an external buffer
+ * in which data are available for transmission.
+ */
 void uart_bus_tx(int base, const char *c)
 {
     outp(base + 4, 0x00);
     outp(base + 3, *c);
 }
 
-/*! \fn int uart_bus_rx_ready(int base)
-    Проверяет готовность для чтения данных из UART шины модуля с базовым адресом \a base,
-    т.е. проверяет, есть ли уже данные для чтения из RX FIFO буфера UART.
-    \param base Базовый адрес модуля (слота).
-    \return 0 Нет еще данных для чтения.
+/*! 
+ * Verifies readiness for reading data from the UART bus module with base address \a base,
+ * ie checks whether there is data to read from the RX FIFO buffer UART.
+ * \param base The base address of the module slot.
+ * See base module address in mio.cpp.
+ * \return 0 if no data to read.
 */
 int uart_bus_rx_ready(int base)
 {
@@ -94,16 +98,16 @@ int uart_bus_rx_ready(int base)
     return ((inpw(base + 3) & 0x01) == 0x01);// == или != ???
 }
 
-/*! \fn void uart_bus_rx(int base, char *c)
-    Читает из UART шину модуля с базовым адресом \a base
-    один символ \a с.
-    \note Перед чтением необходимо ОБЯЗАТЕЛЬНО убедиться (дождаться)
-    что принимающий RX FIFO буфер UART имеет данные (uart_bus_rx_ready()),
-    и только после этого читать символ!!!
-    \param base Базовый адрес модуля (слота).
-    \param c Указатель на конкретный символ в каком-то внешнем
-    буфере в который производится чтение данных при приеме.
-*/
+/*! 
+ * Reads from UART bus module with base address \a base one character \a c.
+ * \note Before reading should always make sure (wait) that the receiving
+ * UART RX FIFO buffer has data uart_bus_rx_ready(), and only then read
+ * the character!
+ * \param base The base address of the module slot.
+ * See base module address in mio.cpp.
+ * \param c A pointer to a particular character in a sort of external
+ * buffer into which data is read at the reception.
+ */
 void uart_bus_rx(int base, char *c)
 {
     outp(base + 4, 0x00);

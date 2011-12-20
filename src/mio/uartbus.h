@@ -2,20 +2,20 @@
 Project :
 Version :
 Date    : 24.03.2011
-Author  : Шиенков Д.И.
+Author  : Denis Shienkov 
 Company :
 Comments:
 License : New BSD
 **********************************************************************************************/
 
 /*! \file uartbus.h
-
-    Аббревиатура модуля (файла) "uartbus" - UART Bus.
-
-    Файл содержит объявления (интерфейс) функций для доступа к низкоскоростным аналоговым модулям I/O
-    (5017+/5018+) через их внутреннюю UART шину.
-
-*/
+ *
+ * Abbreviation of the module (file) "uartbus" - UART Bus.
+ *
+ * The file contains the declaration (interface) functions to access the low-speed 
+ * analog I/O module (5017+ / 5018+) through their internal UART bus.
+ *
+ */
 
 #ifndef UARTBUS_H
 #define UARTBUS_H
