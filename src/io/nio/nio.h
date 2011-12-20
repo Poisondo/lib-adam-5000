@@ -23,7 +23,7 @@ License : New BSD
 #ifndef NIO_H
 #define NIO_H
 
-#include "typedefs.h"
+#include "platformdefs.h"
 
 #ifdef __cplusplus
 extern "C" {

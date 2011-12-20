@@ -18,7 +18,7 @@ License : New BSD
 #ifndef MIO_H
 #define MIO_H
 
-#include "typedefs.h"
+#include "platformdefs.h"
 
 #ifdef __cplusplus
 extern "C" {

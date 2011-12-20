@@ -2,30 +2,25 @@
 Project :
 Version :
 Date    : 10.03.2011
-Author  : Шиенков Д.И.
+Author  : Denis Shienkov
 Company :
 Comments:
 **********************************************************************************************/
 
-/*! \file typedefs.h
+/*! \file platformdefs.h
+ *
+ * In this file you must add your compiler type and determine the basic types of data.
+ *
+ */
 
-    Аббревиатура модуля (файла) "typedefs" - Пользовательские типы данных для проекта TM SEM.
-
-    Для того чтобы в проекте не объявлять переменные длинными типами данных
-    (например unsigned long, unsigned char и т.п.), типа для экономии места в окне редактора и т.п.,
-    введены новые типы данных, которые не загромождают код.
-
-    Хотя, можно обойтись и без этого файла.
-
-*/
-
-#ifndef TYPEDEFS_H
-#define TYPEDEFS_H
+#ifndef PLATFORMDEFS_H
+#define PLATFORMDEFS_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#if defined (__WATCOMC__) 
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned long u32;
@@ -33,6 +28,9 @@ typedef unsigned long u32;
 typedef char s8;
 typedef short s16;
 typedef long s32;
+#else
+#  error "Your compiler is not supported. Please add it to platformdefs.h"
+#endif
 
 #ifdef __cplusplus
 }
