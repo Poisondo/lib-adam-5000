@@ -1,0 +1,1 @@
+The library is intended for the use in PLC Series 5000 from Advantech, instead of using standard libraries
